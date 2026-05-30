@@ -168,6 +168,96 @@
       border: 1px solid #3a3a3a;
     }
     button.secondary:active { background: #1c1c1c; }
+
+    .share-section { margin-top: 22px; }
+    .share-section h3 {
+      font-size: 13px;
+      color: #aaa;
+      margin: 0 0 10px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .share-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .share-grid button.primary { grid-column: span 2; }
+    button.ghost {
+      background: #1c1c1c;
+      color: #eee;
+      border: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    button.ghost:active { background: #232323; }
+    button.ghost .ico { color: var(--accent); font-weight: 700; }
+    .reset-row { margin-top: 10px; }
+    .reset-row button { width: 100%; flex: none; }
+
+    details.help {
+      margin-top: 18px;
+      background: #161616;
+      border: 1px solid #232323;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #bbb;
+    }
+    details.help summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #ddd;
+      list-style: none;
+      padding: 4px 0;
+      outline: none;
+    }
+    details.help summary::-webkit-details-marker { display: none; }
+    details.help summary::before {
+      content: '＋ ';
+      color: var(--accent);
+      font-weight: 700;
+    }
+    details.help[open] summary::before { content: '− '; }
+    details.help h4 {
+      margin: 14px 0 6px;
+      font-size: 13px;
+      color: var(--accent);
+    }
+    details.help ol, details.help ul { padding-left: 20px; margin: 6px 0; }
+    details.help li { margin: 4px 0; }
+    details.help code {
+      background: #0e0e0e;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--accent);
+      color: #111;
+      padding: 10px 18px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      z-index: 100;
+      box-shadow: 0 6px 20px rgba(0,0,0,.4);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -182,10 +272,47 @@
       <label for="memo">メモ</label>
       <textarea id="memo" class="memo" placeholder="体調・気づき・コンディションなど"></textarea>
     </div>
-    <div class="actions">
-      <button class="primary" id="csvBtn">CSV書き出し</button>
-      <button class="secondary" id="resetBtn">今日をリセット</button>
+    <div class="share-section">
+      <h3>連携</h3>
+      <div class="share-grid">
+        <button class="primary" id="shareBtn">共有...</button>
+        <button class="ghost" id="chatgptBtn"><span class="ico">◎</span>ChatGPTで相談</button>
+        <button class="ghost" id="healthBtn"><span class="ico">♥</span>ヘルスに記録</button>
+        <button class="ghost" id="csvBtn">CSV書き出し</button>
+        <button class="ghost" id="copyBtn">テキストをコピー</button>
+      </div>
+      <div class="reset-row">
+        <button class="secondary" id="resetBtn">今日をリセット</button>
+      </div>
+
+      <details class="help">
+        <summary>連携の使い方</summary>
+
+        <h4>共有...</h4>
+        <p>今日のチェック結果をiOSの共有シートで開きます。表示された候補から ChatGPTアプリ・メモ・LINE・メール・ショートカット など任意の宛先を選べます。</p>
+
+        <h4>ChatGPTで相談</h4>
+        <p>コーチング用プロンプト（今日の結果＋フィードバック依頼）をクリップボードにコピーして、ChatGPTを開きます。入力欄を長押し→ペースト→送信。</p>
+
+        <h4>ヘルスに記録</h4>
+        <p>iOSのショートカットを呼び出してヘルスケアにワークアウトを記録します。<b>初回だけ</b>以下のショートカットを作成してください。</p>
+        <ol>
+          <li>「ショートカット」アプリ → 右上「+」で新規作成</li>
+          <li>アクションを追加：<code>ワークアウトを記録</code>
+            <ul>
+              <li>種類：機能的筋力トレーニング</li>
+              <li>継続時間：60分（好みで調整）</li>
+            </ul>
+          </li>
+          <li>必要なら <code>ショートカットの入力</code> を <code>クイックメモを作成</code> や <code>クリップボードにコピー</code> へ繋ぐとメモも残せます</li>
+          <li>名前を <code>今日のジムをヘルスに記録</code> に設定して保存</li>
+          <li>本アプリの「ヘルスに記録」を押すと自動実行されます</li>
+        </ol>
+        <p>※ 名前を変えたい場合は、ボタンが呼ぶショートカット名と一致させてください。</p>
+      </details>
     </div>
+
+    <div class="toast" id="toast"></div>
   </main>
   <script>
     const STORAGE_KEY = 'gym_routine_v2';
@@ -358,8 +485,110 @@
       render();
     }
 
+    function buildSummary() {
+      const data = ensureToday();
+      const d = today();
+      const lines = [];
+      let totalDone = 0, totalAll = 0;
+      const sectionLines = [];
+      ROUTINE.forEach(sec => {
+        const done = sec.items.filter((_, i) => data.checks[checkKey(sec.id, i)]).length;
+        totalDone += done;
+        totalAll += sec.items.length;
+        sectionLines.push(`- ${sec.title}: ${done}/${sec.items.length}`);
+        sec.items.forEach((label, i) => {
+          const mark = data.checks[checkKey(sec.id, i)] ? '☑' : '☐';
+          sectionLines.push(`  ${mark} ${label}`);
+        });
+      });
+      lines.push(`【今日のジム ${d}】`);
+      lines.push(`完了: ${totalDone}/${totalAll}`);
+      lines.push('');
+      lines.push(...sectionLines);
+      if (data.memo) {
+        lines.push('');
+        lines.push('メモ:');
+        lines.push(data.memo);
+      }
+      return lines.join('\n');
+    }
+
+    function buildChatGPTPrompt() {
+      return [
+        '以下は今日のジムの結果です。パーソナルトレーナーとして',
+        '1) 今日の達成度の評価、2) 改善ポイント、3) 明日の調整提案 を簡潔にください。',
+        '',
+        buildSummary(),
+      ].join('\n');
+    }
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (_) {}
+        document.body.removeChild(ta);
+        return ok;
+      }
+    }
+
+    async function shareSession() {
+      const text = buildSummary();
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: '今日のジム', text });
+          return;
+        } catch (e) {
+          if (e && e.name === 'AbortError') return;
+        }
+      }
+      const ok = await copyText(text);
+      toast(ok ? 'コピーしました' : 'コピー失敗');
+    }
+
+    async function openChatGPT() {
+      const prompt = buildChatGPTPrompt();
+      const ok = await copyText(prompt);
+      toast(ok ? 'プロンプトをコピー → ChatGPTを開きます' : 'コピー失敗 → ChatGPTを開きます');
+      setTimeout(() => {
+        window.location.href = 'https://chatgpt.com/';
+      }, 600);
+    }
+
+    function runHealthShortcut() {
+      const summary = buildSummary();
+      const name = encodeURIComponent('今日のジムをヘルスに記録');
+      const input = encodeURIComponent(summary);
+      window.location.href = `shortcuts://run-shortcut?name=${name}&input=text&text=${input}`;
+    }
+
+    async function copySummary() {
+      const ok = await copyText(buildSummary());
+      toast(ok ? 'コピーしました' : 'コピー失敗');
+    }
+
     document.getElementById('csvBtn').addEventListener('click', exportCSV);
     document.getElementById('resetBtn').addEventListener('click', resetToday);
+    document.getElementById('shareBtn').addEventListener('click', shareSession);
+    document.getElementById('chatgptBtn').addEventListener('click', openChatGPT);
+    document.getElementById('healthBtn').addEventListener('click', runHealthShortcut);
+    document.getElementById('copyBtn').addEventListener('click', copySummary);
 
     render();
   </script>
