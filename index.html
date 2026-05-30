@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Gym Checklist</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gym">
+  <meta name="theme-color" content="#111111">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" href="icon-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", sans-serif;
+      background: #111;
+      color: #eee;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      min-height: 100vh;
+    }
+    header { padding: 14px 16px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+    h1 { margin: 0; font-size: 17px; font-weight: 600; }
+    .date { font-size: 13px; color: #888; }
+    .tabs { display: flex; border-bottom: 1px solid #333; position: sticky; top: 0; background: #111; z-index: 10; }
+    .tab { flex: 1; padding: 14px 0; text-align: center; background: transparent; color: #888; border: none; font-size: 15px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; }
+    .tab.active { color: #fff; border-bottom-color: #4caf50; }
+    main { padding: 12px 14px 80px; max-width: 640px; margin: 0 auto; }
+    .exercise { background: #1c1c1c; border-radius: 10px; padding: 12px; margin-bottom: 10px; transition: opacity .2s; }
+    .exercise.done { opacity: 0.55; }
+    .exercise-header { display: flex; align-items: center; gap: 12px; }
+    .exercise-header input[type="checkbox"] { width: 22px; height: 22px; accent-color: #4caf50; flex-shrink: 0; }
+    .exercise-header .name { flex: 1; font-size: 15px; font-weight: 500; }
+    .exercise.done .name { text-decoration: line-through; }
+    .sets { display: grid; grid-template-columns: 40px 1fr 1fr; gap: 6px 8px; margin-top: 10px; align-items: center; }
+    .sets .head { font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: .05em; }
+    .sets .setno { font-size: 12px; color: #888; text-align: center; }
+    .sets input { background: #2a2a2a; color: #eee; border: 1px solid #3a3a3a; border-radius: 6px; padding: 7px 8px; font-size: 15px; width: 100%; }
+    .sets input:focus { outline: none; border-color: #4caf50; }
+    .memo-section { margin-top: 18px; }
+    .memo-section label { display: block; font-size: 13px; color: #aaa; margin-bottom: 6px; }
+    textarea.memo { width: 100%; min-height: 70px; background: #1c1c1c; color: #eee; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; font-family: inherit; resize: vertical; }
+    textarea.memo:focus { outline: none; border-color: #4caf50; }
+    .actions { display: flex; gap: 8px; margin-top: 18px; }
+    button.primary, button.secondary { flex: 1; padding: 12px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; }
+    button.primary { background: #4caf50; color: #fff; border: none; }
+    button.secondary { background: transparent; color: #ccc; border: 1px solid #444; }
+    button.primary:active { background: #43a047; }
+    button.secondary:active { background: #222; }
+    .progress { font-size: 12px; color: #888; margin: 8px 2px 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Gym Checklist</h1>
+    <div class="date" id="dateLabel"></div>
+  </header>
+  <div class="tabs" id="tabs"></div>
+  <main>
+    <div class="progress" id="progress"></div>
+    <div id="exercises"></div>
+    <div class="memo-section">
+      <label for="memo">メモ</label>
+      <textarea id="memo" class="memo" placeholder="体調・気づき・コンディションなど"></textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="csvBtn">CSV書き出し</button>
+      <button class="secondary" id="resetBtn">今日をリセット</button>
+    </div>
+  </main>
+  <script>
+    const STORAGE_KEY = 'gym_routine_v2';
+    const ROUTINE = {
+      push: {
+        label: 'Push',
+        exercises: [
+          { name: 'ベンチプレス', sets: 4 },
+          { name: 'インクラインダンベルプレス', sets: 3 },
+          { name: 'ショルダープレス', sets: 3 },
+          { name: 'サイドレイズ', sets: 3 },
+          { name: 'ケーブルフライ', sets: 3 },
+          { name: 'トライセプスプッシュダウン', sets: 3 },
+        ]
+      },
+      pull: {
+        label: 'Pull',
+        exercises: [
+          { name: 'デッドリフト', sets: 3 },
+          { name: 'ラットプルダウン', sets: 4 },
+          { name: 'ベントオーバーロー', sets: 3 },
+          { name: 'シーテッドロー', sets: 3 },
+          { name: 'フェイスプル', sets: 3 },
+          { name: 'バーベルカール', sets: 3 },
+        ]
+      },
+      legs: {
+        label: 'Legs',
+        exercises: [
+          { name: 'スクワット', sets: 4 },
+          { name: 'レッグプレス', sets: 3 },
+          { name: 'ルーマニアンデッドリフト', sets: 3 },
+          { name: 'レッグカール', sets: 3 },
+          { name: 'レッグエクステンション', sets: 3 },
+          { name: 'カーフレイズ', sets: 3 },
+        ]
+      }
+    };
+
+    const today = () => new Date().toISOString().slice(0, 10);
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) { console.warn('load failed', e); }
+      return { activeTab: 'push', sessions: {} };
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) { console.warn('save failed', e); }
+    }
+
+    function ensureTabData(tab) {
+      const d = today();
+      if (!state.sessions[d]) state.sessions[d] = {};
+      if (!state.sessions[d][tab]) {
+        state.sessions[d][tab] = {
+          exercises: ROUTINE[tab].exercises.map(e => ({
+            name: e.name,
+            done: false,
+            sets: Array.from({ length: e.sets }, () => ({ weight: '', reps: '' }))
+          })),
+          memo: ''
+        };
+      }
+      return state.sessions[d][tab];
+    }
+
+    let state = loadState();
+
+    function renderTabs() {
+      const el = document.getElementById('tabs');
+      el.innerHTML = '';
+      Object.entries(ROUTINE).forEach(([key, def]) => {
+        const btn = document.createElement('button');
+        btn.className = 'tab' + (state.activeTab === key ? ' active' : '');
+        btn.textContent = def.label;
+        btn.addEventListener('click', () => {
+          state.activeTab = key;
+          saveState();
+          renderAll();
+        });
+        el.appendChild(btn);
+      });
+    }
+
+    function renderExercises() {
+      const tab = state.activeTab;
+      const data = ensureTabData(tab);
+      const wrap = document.getElementById('exercises');
+      wrap.innerHTML = '';
+
+      data.exercises.forEach((ex) => {
+        const div = document.createElement('div');
+        div.className = 'exercise' + (ex.done ? ' done' : '');
+
+        const header = document.createElement('div');
+        header.className = 'exercise-header';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = ex.done;
+        cb.addEventListener('change', () => {
+          ex.done = cb.checked;
+          div.classList.toggle('done', cb.checked);
+          saveState();
+          updateProgress();
+        });
+
+        const name = document.createElement('div');
+        name.className = 'name';
+        name.textContent = ex.name;
+
+        header.appendChild(cb);
+        header.appendChild(name);
+        div.appendChild(header);
+
+        const sets = document.createElement('div');
+        sets.className = 'sets';
+
+        const h1 = document.createElement('div'); h1.className = 'head setno'; h1.textContent = 'SET';
+        const h2 = document.createElement('div'); h2.className = 'head'; h2.textContent = '重量(kg)';
+        const h3 = document.createElement('div'); h3.className = 'head'; h3.textContent = '回数';
+        sets.appendChild(h1); sets.appendChild(h2); sets.appendChild(h3);
+
+        ex.sets.forEach((s, i) => {
+          const no = document.createElement('div');
+          no.className = 'setno';
+          no.textContent = String(i + 1);
+          sets.appendChild(no);
+
+          const w = document.createElement('input');
+          w.type = 'number';
+          w.inputMode = 'decimal';
+          w.value = s.weight;
+          w.placeholder = '0';
+          w.addEventListener('input', () => { s.weight = w.value; saveState(); });
+          sets.appendChild(w);
+
+          const r = document.createElement('input');
+          r.type = 'number';
+          r.inputMode = 'numeric';
+          r.value = s.reps;
+          r.placeholder = '0';
+          r.addEventListener('input', () => { s.reps = r.value; saveState(); });
+          sets.appendChild(r);
+        });
+
+        div.appendChild(sets);
+        wrap.appendChild(div);
+      });
+
+      const memo = document.getElementById('memo');
+      memo.value = data.memo;
+      memo.oninput = () => { data.memo = memo.value; saveState(); };
+
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const data = ensureTabData(state.activeTab);
+      const done = data.exercises.filter(e => e.done).length;
+      const total = data.exercises.length;
+      document.getElementById('progress').textContent = `${ROUTINE[state.activeTab].label} ・ ${done}/${total} 完了`;
+    }
+
+    function renderAll() {
+      document.getElementById('dateLabel').textContent = today();
+      renderTabs();
+      renderExercises();
+    }
+
+    function exportCSV() {
+      const rows = [['date', 'tab', 'exercise', 'done', 'set', 'weight_kg', 'reps', 'memo']];
+      Object.entries(state.sessions).forEach(([date, tabs]) => {
+        Object.entries(tabs).forEach(([tab, data]) => {
+          data.exercises.forEach(ex => {
+            ex.sets.forEach((s, i) => {
+              rows.push([
+                date, tab, ex.name, ex.done ? '1' : '0',
+                i + 1, s.weight, s.reps,
+                (data.memo || '').replace(/[\r\n]+/g, ' ')
+              ]);
+            });
+          });
+        });
+      });
+      const csv = rows.map(r => r.map(v => {
+        const s = String(v ?? '');
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }).join(',')).join('\n');
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gym_${today()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function resetToday() {
+      const tab = state.activeTab;
+      if (!confirm(`今日の ${ROUTINE[tab].label} をリセットしますか？`)) return;
+      const d = today();
+      if (state.sessions[d]) delete state.sessions[d][tab];
+      saveState();
+      renderExercises();
+    }
+
+    document.getElementById('csvBtn').addEventListener('click', exportCSV);
+    document.getElementById('resetBtn').addEventListener('click', resetToday);
+
+    renderAll();
+  </script>
+</body>
+</html>
