@@ -2,17 +2,18 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Gym Checklist</title>
+  <title>今日のジム</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Gym">
+  <meta name="apple-mobile-web-app-title" content="今日のジム">
   <meta name="theme-color" content="#111111">
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="icon" href="icon-180.png">
   <link rel="manifest" href="manifest.webmanifest">
   <style>
+    :root { --accent: #d4ff4f; }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; padding: 0; }
     body {
@@ -22,47 +23,161 @@
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
       min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
-    header { padding: 14px 16px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-    h1 { margin: 0; font-size: 17px; font-weight: 600; }
+    header {
+      padding: 14px 16px;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      background: #111;
+      z-index: 10;
+    }
+    h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: .02em; }
     .date { font-size: 13px; color: #888; }
-    .tabs { display: flex; border-bottom: 1px solid #333; position: sticky; top: 0; background: #111; z-index: 10; }
-    .tab { flex: 1; padding: 14px 0; text-align: center; background: transparent; color: #888; border: none; font-size: 15px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; }
-    .tab.active { color: #fff; border-bottom-color: #4caf50; }
-    main { padding: 12px 14px 80px; max-width: 640px; margin: 0 auto; }
-    .exercise { background: #1c1c1c; border-radius: 10px; padding: 12px; margin-bottom: 10px; transition: opacity .2s; }
-    .exercise.done { opacity: 0.55; }
-    .exercise-header { display: flex; align-items: center; gap: 12px; }
-    .exercise-header input[type="checkbox"] { width: 22px; height: 22px; accent-color: #4caf50; flex-shrink: 0; }
-    .exercise-header .name { flex: 1; font-size: 15px; font-weight: 500; }
-    .exercise.done .name { text-decoration: line-through; }
-    .sets { display: grid; grid-template-columns: 40px 1fr 1fr; gap: 6px 8px; margin-top: 10px; align-items: center; }
-    .sets .head { font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: .05em; }
-    .sets .setno { font-size: 12px; color: #888; text-align: center; }
-    .sets input { background: #2a2a2a; color: #eee; border: 1px solid #3a3a3a; border-radius: 6px; padding: 7px 8px; font-size: 15px; width: 100%; }
-    .sets input:focus { outline: none; border-color: #4caf50; }
-    .memo-section { margin-top: 18px; }
-    .memo-section label { display: block; font-size: 13px; color: #aaa; margin-bottom: 6px; }
-    textarea.memo { width: 100%; min-height: 70px; background: #1c1c1c; color: #eee; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; font-family: inherit; resize: vertical; }
-    textarea.memo:focus { outline: none; border-color: #4caf50; }
-    .actions { display: flex; gap: 8px; margin-top: 18px; }
-    button.primary, button.secondary { flex: 1; padding: 12px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; }
-    button.primary { background: #4caf50; color: #fff; border: none; }
-    button.secondary { background: transparent; color: #ccc; border: 1px solid #444; }
-    button.primary:active { background: #43a047; }
-    button.secondary:active { background: #222; }
-    .progress { font-size: 12px; color: #888; margin: 8px 2px 14px; }
+    main { padding: 14px 16px 100px; max-width: 680px; margin: 0 auto; }
+    .progress {
+      font-size: 12px;
+      color: #aaa;
+      margin: 4px 2px 16px;
+      letter-spacing: .04em;
+    }
+    .progress b { color: var(--accent); font-weight: 700; }
+    .section {
+      background: #1c1c1c;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .section h2 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #f0f0f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section .count {
+      font-size: 12px;
+      color: #888;
+      font-weight: 400;
+      margin-left: auto;
+    }
+    .section.complete h2 .count { color: var(--accent); }
+    ul.items { list-style: none; margin: 0; padding: 0; }
+    li.item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 6px;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      transition: background .15s;
+    }
+    li.item + li.item { border-top: 1px solid #262626; }
+    li.item:active { background: #232323; }
+    li.item input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border: 2px solid #555;
+      border-radius: 6px;
+      background: transparent;
+      flex-shrink: 0;
+      position: relative;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    li.item input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    li.item input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 1px;
+      width: 6px;
+      height: 12px;
+      border: solid #111;
+      border-width: 0 2.5px 2.5px 0;
+      transform: rotate(45deg);
+    }
+    li.item .label {
+      flex: 1;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    li.item.done .label {
+      color: #777;
+      text-decoration: line-through;
+      text-decoration-color: #555;
+    }
+    .memo-section { margin-top: 22px; }
+    .memo-section label {
+      display: block;
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 6px;
+      letter-spacing: .02em;
+    }
+    textarea.memo {
+      width: 100%;
+      min-height: 80px;
+      background: #1c1c1c;
+      color: #eee;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    textarea.memo:focus { outline: none; border-color: var(--accent); }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    button {
+      flex: 1;
+      padding: 13px;
+      border-radius: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: .02em;
+    }
+    button.primary {
+      background: var(--accent);
+      color: #111;
+      border: none;
+    }
+    button.primary:active { background: #b8e040; }
+    button.secondary {
+      background: transparent;
+      color: #bbb;
+      border: 1px solid #3a3a3a;
+    }
+    button.secondary:active { background: #1c1c1c; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Gym Checklist</h1>
+    <h1>今日のジム</h1>
     <div class="date" id="dateLabel"></div>
   </header>
-  <div class="tabs" id="tabs"></div>
   <main>
     <div class="progress" id="progress"></div>
-    <div id="exercises"></div>
+    <div id="sections"></div>
     <div class="memo-section">
       <label for="memo">メモ</label>
       <textarea id="memo" class="memo" placeholder="体調・気づき・コンディションなど"></textarea>
@@ -74,41 +189,16 @@
   </main>
   <script>
     const STORAGE_KEY = 'gym_routine_v2';
-    const ROUTINE = {
-      push: {
-        label: 'Push',
-        exercises: [
-          { name: 'ベンチプレス', sets: 4 },
-          { name: 'インクラインダンベルプレス', sets: 3 },
-          { name: 'ショルダープレス', sets: 3 },
-          { name: 'サイドレイズ', sets: 3 },
-          { name: 'ケーブルフライ', sets: 3 },
-          { name: 'トライセプスプッシュダウン', sets: 3 },
-        ]
-      },
-      pull: {
-        label: 'Pull',
-        exercises: [
-          { name: 'デッドリフト', sets: 3 },
-          { name: 'ラットプルダウン', sets: 4 },
-          { name: 'ベントオーバーロー', sets: 3 },
-          { name: 'シーテッドロー', sets: 3 },
-          { name: 'フェイスプル', sets: 3 },
-          { name: 'バーベルカール', sets: 3 },
-        ]
-      },
-      legs: {
-        label: 'Legs',
-        exercises: [
-          { name: 'スクワット', sets: 4 },
-          { name: 'レッグプレス', sets: 3 },
-          { name: 'ルーマニアンデッドリフト', sets: 3 },
-          { name: 'レッグカール', sets: 3 },
-          { name: 'レッグエクステンション', sets: 3 },
-          { name: 'カーフレイズ', sets: 3 },
-        ]
-      }
-    };
+    const ROUTINE = [
+      { id: 'legpress', title: 'レッグプレス', items: ['1セット目：10回', '2セット目：10回', '3セット目：10回'] },
+      { id: 'chestpress', title: 'チェストプレス', items: ['1セット目：10回', '2セット目：10回', '3セット目：10回'] },
+      { id: 'latpulldown', title: 'ラットプルダウン', items: ['1セット目：10回', '2セット目：10回', '3セット目：10回'] },
+      { id: 'seatedrow', title: 'シーテッドロー', items: ['1セット目：10回', '2セット目：10回', '3セット目：10回'] },
+      { id: 'shoulderpress', title: 'ショルダープレス', items: ['1セット目：10回', '2セット目：10回', '3セット目：10回'] },
+      { id: 'plank', title: 'プランク', items: ['1回目：30〜45秒', '2回目：30〜45秒', '3回目：30〜45秒'] },
+      { id: 'treadmill', title: 'トレッドミル', items: ['時速6kmで20分', '余力があれば30分まで延長'] },
+      { id: 'aftergym', title: 'ジム後', items: ['タンパク質30g前後を摂る', '今日の合計歩数8,000〜10,000歩を確認', '夜の間食を控える'] },
+    ];
 
     const today = () => new Date().toISOString().slice(0, 10);
 
@@ -117,7 +207,7 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) return JSON.parse(raw);
       } catch (e) { console.warn('load failed', e); }
-      return { activeTab: 'push', sessions: {} };
+      return { sessions: {} };
     }
 
     function saveState() {
@@ -126,138 +216,119 @@
       } catch (e) { console.warn('save failed', e); }
     }
 
-    function ensureTabData(tab) {
+    function ensureToday() {
       const d = today();
-      if (!state.sessions[d]) state.sessions[d] = {};
-      if (!state.sessions[d][tab]) {
-        state.sessions[d][tab] = {
-          exercises: ROUTINE[tab].exercises.map(e => ({
-            name: e.name,
-            done: false,
-            sets: Array.from({ length: e.sets }, () => ({ weight: '', reps: '' }))
-          })),
-          memo: ''
-        };
-      }
-      return state.sessions[d][tab];
+      if (!state.sessions[d]) state.sessions[d] = { checks: {}, memo: '' };
+      if (!state.sessions[d].checks) state.sessions[d].checks = {};
+      if (typeof state.sessions[d].memo !== 'string') state.sessions[d].memo = '';
+      return state.sessions[d];
     }
 
     let state = loadState();
 
-    function renderTabs() {
-      const el = document.getElementById('tabs');
-      el.innerHTML = '';
-      Object.entries(ROUTINE).forEach(([key, def]) => {
-        const btn = document.createElement('button');
-        btn.className = 'tab' + (state.activeTab === key ? ' active' : '');
-        btn.textContent = def.label;
-        btn.addEventListener('click', () => {
-          state.activeTab = key;
-          saveState();
-          renderAll();
-        });
-        el.appendChild(btn);
-      });
+    function checkKey(sectionId, idx) { return `${sectionId}:${idx}`; }
+
+    function totalItems() {
+      return ROUTINE.reduce((s, sec) => s + sec.items.length, 0);
     }
 
-    function renderExercises() {
-      const tab = state.activeTab;
-      const data = ensureTabData(tab);
-      const wrap = document.getElementById('exercises');
-      wrap.innerHTML = '';
-
-      data.exercises.forEach((ex) => {
-        const div = document.createElement('div');
-        div.className = 'exercise' + (ex.done ? ' done' : '');
-
-        const header = document.createElement('div');
-        header.className = 'exercise-header';
-
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.checked = ex.done;
-        cb.addEventListener('change', () => {
-          ex.done = cb.checked;
-          div.classList.toggle('done', cb.checked);
-          saveState();
-          updateProgress();
-        });
-
-        const name = document.createElement('div');
-        name.className = 'name';
-        name.textContent = ex.name;
-
-        header.appendChild(cb);
-        header.appendChild(name);
-        div.appendChild(header);
-
-        const sets = document.createElement('div');
-        sets.className = 'sets';
-
-        const h1 = document.createElement('div'); h1.className = 'head setno'; h1.textContent = 'SET';
-        const h2 = document.createElement('div'); h2.className = 'head'; h2.textContent = '重量(kg)';
-        const h3 = document.createElement('div'); h3.className = 'head'; h3.textContent = '回数';
-        sets.appendChild(h1); sets.appendChild(h2); sets.appendChild(h3);
-
-        ex.sets.forEach((s, i) => {
-          const no = document.createElement('div');
-          no.className = 'setno';
-          no.textContent = String(i + 1);
-          sets.appendChild(no);
-
-          const w = document.createElement('input');
-          w.type = 'number';
-          w.inputMode = 'decimal';
-          w.value = s.weight;
-          w.placeholder = '0';
-          w.addEventListener('input', () => { s.weight = w.value; saveState(); });
-          sets.appendChild(w);
-
-          const r = document.createElement('input');
-          r.type = 'number';
-          r.inputMode = 'numeric';
-          r.value = s.reps;
-          r.placeholder = '0';
-          r.addEventListener('input', () => { s.reps = r.value; saveState(); });
-          sets.appendChild(r);
-        });
-
-        div.appendChild(sets);
-        wrap.appendChild(div);
-      });
-
-      const memo = document.getElementById('memo');
-      memo.value = data.memo;
-      memo.oninput = () => { data.memo = memo.value; saveState(); };
-
-      updateProgress();
+    function doneCount() {
+      const data = ensureToday();
+      let n = 0;
+      ROUTINE.forEach(sec => sec.items.forEach((_, i) => {
+        if (data.checks[checkKey(sec.id, i)]) n++;
+      }));
+      return n;
     }
 
     function updateProgress() {
-      const data = ensureTabData(state.activeTab);
-      const done = data.exercises.filter(e => e.done).length;
-      const total = data.exercises.length;
-      document.getElementById('progress').textContent = `${ROUTINE[state.activeTab].label} ・ ${done}/${total} 完了`;
+      const done = doneCount();
+      const total = totalItems();
+      document.getElementById('progress').innerHTML = `完了 <b>${done}</b> / ${total}`;
     }
 
-    function renderAll() {
+    function render() {
       document.getElementById('dateLabel').textContent = today();
-      renderTabs();
-      renderExercises();
+      const data = ensureToday();
+      const wrap = document.getElementById('sections');
+      wrap.innerHTML = '';
+
+      ROUTINE.forEach(sec => {
+        const sectionEl = document.createElement('section');
+        sectionEl.className = 'section';
+
+        const doneInSec = sec.items.filter((_, i) => data.checks[checkKey(sec.id, i)]).length;
+        if (doneInSec === sec.items.length) sectionEl.classList.add('complete');
+
+        const h2 = document.createElement('h2');
+        h2.textContent = sec.title;
+        const count = document.createElement('span');
+        count.className = 'count';
+        count.textContent = `${doneInSec}/${sec.items.length}`;
+        h2.appendChild(count);
+        sectionEl.appendChild(h2);
+
+        const ul = document.createElement('ul');
+        ul.className = 'items';
+
+        sec.items.forEach((label, i) => {
+          const key = checkKey(sec.id, i);
+          const li = document.createElement('li');
+          li.className = 'item' + (data.checks[key] ? ' done' : '');
+
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = !!data.checks[key];
+          cb.addEventListener('click', (e) => e.stopPropagation());
+          cb.addEventListener('change', () => toggle(sec, i, cb.checked, li, sectionEl, count));
+
+          const txt = document.createElement('div');
+          txt.className = 'label';
+          txt.textContent = label;
+
+          li.appendChild(cb);
+          li.appendChild(txt);
+          li.addEventListener('click', () => {
+            cb.checked = !cb.checked;
+            toggle(sec, i, cb.checked, li, sectionEl, count);
+          });
+          ul.appendChild(li);
+        });
+
+        sectionEl.appendChild(ul);
+        wrap.appendChild(sectionEl);
+      });
+
+      document.getElementById('memo').value = data.memo;
+      updateProgress();
     }
+
+    function toggle(sec, idx, checked, liEl, sectionEl, countEl) {
+      const data = ensureToday();
+      const key = checkKey(sec.id, idx);
+      if (checked) data.checks[key] = true; else delete data.checks[key];
+      saveState();
+      liEl.classList.toggle('done', checked);
+      const doneInSec = sec.items.filter((_, i) => data.checks[checkKey(sec.id, i)]).length;
+      countEl.textContent = `${doneInSec}/${sec.items.length}`;
+      sectionEl.classList.toggle('complete', doneInSec === sec.items.length);
+      updateProgress();
+    }
+
+    document.getElementById('memo').addEventListener('input', (e) => {
+      ensureToday().memo = e.target.value;
+      saveState();
+    });
 
     function exportCSV() {
-      const rows = [['date', 'tab', 'exercise', 'done', 'set', 'weight_kg', 'reps', 'memo']];
-      Object.entries(state.sessions).forEach(([date, tabs]) => {
-        Object.entries(tabs).forEach(([tab, data]) => {
-          data.exercises.forEach(ex => {
-            ex.sets.forEach((s, i) => {
-              rows.push([
-                date, tab, ex.name, ex.done ? '1' : '0',
-                i + 1, s.weight, s.reps,
-                (data.memo || '').replace(/[\r\n]+/g, ' ')
-              ]);
-            });
+      const rows = [['date', 'section', 'item_index', 'item', 'done', 'memo']];
+      Object.entries(state.sessions).forEach(([date, data]) => {
+        const checks = data.checks || {};
+        const memo = (data.memo || '').replace(/[\r\n]+/g, ' ');
+        ROUTINE.forEach(sec => {
+          sec.items.forEach((label, i) => {
+            const key = checkKey(sec.id, i);
+            rows.push([date, sec.title, i + 1, label, checks[key] ? '1' : '0', memo]);
           });
         });
       });
@@ -277,18 +348,20 @@
     }
 
     function resetToday() {
-      const tab = state.activeTab;
-      if (!confirm(`今日の ${ROUTINE[tab].label} をリセットしますか？`)) return;
+      if (!confirm('今日のチェックを全てリセットしますか？')) return;
       const d = today();
-      if (state.sessions[d]) delete state.sessions[d][tab];
+      if (state.sessions[d]) {
+        state.sessions[d].checks = {};
+        state.sessions[d].memo = '';
+      }
       saveState();
-      renderExercises();
+      render();
     }
 
     document.getElementById('csvBtn').addEventListener('click', exportCSV);
     document.getElementById('resetBtn').addEventListener('click', resetToday);
 
-    renderAll();
+    render();
   </script>
 </body>
 </html>
